@@ -1,0 +1,319 @@
+--zad dodatkowe
+--1a
+select e."EmployeeID"
+,	   e."FirstName"
+,	   e."LastName"
+,	   o."OrderID"
+,	   o."OrderDate" 
+from employees e
+join orders o on e."EmployeeID" = o."EmployeeID"
+where e."EmployeeID" in (2,4,5);
+--1b
+select e."EmployeeID"
+,	   e."FirstName"
+,	   e."LastName"
+,	   o."OrderID"
+,	   o."OrderDate" 
+from employees e
+join orders o on e."EmployeeID" = o."EmployeeID"
+where e."EmployeeID" % 2 = 0
+order by e."EmployeeID";
+--1c
+select distinct upper("FirstName") 
+from employees
+order by upper("FirstName");
+--1d
+select "OrderDate" 
+, 	   "OrderID" 
+from orders o
+where date_part('year',"OrderDate") = 2016; 
+--1e
+select "LastName" 
+,      "FirstName"  
+,	case 
+	when random() > 0.7 then 'dodatkowy dzien wolny'
+	when random() > 0.1 then 'brak nagrody'
+	else 'musisz zrobic nadgodziny'
+	end zmienna_losowa
+from employees e
+where "EmployeeID" = 1;
+--1f
+select e."EmployeeID"
+,	   e."FirstName"
+,	   e."LastName"
+,	   et."TerritoryID"
+,	   t."TerritoryDescription" 
+from employees e
+join employeeterritories et on e."EmployeeID" = et."EmployeeID"
+join territories t on et."TerritoryID" = t."TerritoryID" ;
+--1g
+select *,
+	replace(replace(s."Phone",'(',''),')','') new_phone
+,	coalesce(o."ShipRegion",o."ShipCity") new_Ship_Region
+from orders o
+join shippers s on o."ShipVia" = s."ShipperID"
+where (date_part('month',o."OrderDate") in (10,11,12)) and (date_part('year',o."OrderDate") = 1996); 
+
+select
+	o."OrderID" 
+,	o."OrderDate" 
+,	coalesce (o."ShipRegion", o."ShipCity") 
+,	s."ShipperID" 
+,	replace(replace(s."Phone",'(',''),')','') as new_phone
+,	EXTRACT(QUARTER FROM o."OrderDate") as kwartal
+from orders o 
+join shippers s on s."ShipperID" = o."ShipVia" 
+where EXTRACT(QUARTER FROM o."OrderDate") = 1 and EXTRACT(YEAR FROM o."OrderDate") = 1997
+;
+--1h
+select p."ProductName"
+,	   c."CategoryName"
+,	   s."CompanyName" 
+from orders o
+join order_details od on o."OrderID" = od."OrderID"
+join products p on od."ProductID" = p."ProductID" 
+join categories c on p."CategoryID" = c."CategoryID"
+join shippers s on o."ShipVia" = s."ShipperID"
+where p."UnitsInStock" < 15 
+or od."Discount" > 0; 
+
+_________________________________________
+
+--2a
+select count(e."EmployeeID") 
+from employees e
+where lower(e."Title") like '%manager'; 
+--2b
+/*select min("HireDate" )
+from employees e */
+
+select count(e."EmployeeID")
+,	abs(round((('1992-04-01')-e."HireDate")/365,0))as liczba_lat
+from employees e
+group by round((('1992-04-01')-e."HireDate")/365,0);
+--2c
+select  "FirstName" 
+,		"LastName" 
+,		"BirthDate" 
+,		"HireDate" 
+,		round((e."HireDate" - e."BirthDate")/365,0) as wiek_w_momencie_zatrudnienia
+from employees e;
+--2c- max wartosc
+select 
+	max(round((e."HireDate" - e."BirthDate")/365,0)) as max_wiek
+from employees e;
+--2d = 9
+select * 
+from employees e
+--2d - i
+select count(e."EmployeeID")
+from employees e
+where ('2013-11-01'- e."BirthDate")/ 365> 50; 
+--2d - ii
+select count(e."EmployeeID")
+from employees e
+where ((('2013-11-01'- e."BirthDate")/365 > 65) and (lower(e."TitleOfCourtesy") in ('ms.','mrs.'))) or ((('2013-11-01'- e."BirthDate")/365 > 65) and (lower(e."TitleOfCourtesy") in ('mr.','dr.')));
+--2d - iii
+select count(e."EmployeeID")
+from employees e
+where ('2013-11-01'- e."HireDate")/365 > 3; 
+--2d - iv
+select avg(('2013-11-01'- e."HireDate")/365) as sr_staz_pracy
+,	   min(('2013-11-01'- e."HireDate")/365) as min_staz_pracy
+,	   max(('2013-11-01'- e."HireDate")/365) as max_staz_pracy
+from employees e; 
+--2e
+select min(o."OrderDate")
+,	   max(o."OrderDate")
+from orders o; 
+--2f
+select c."CompanyName"
+,	   o."OrderDate"
+,	   count(o."OrderID") as liczba_zam
+,	   round(min(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as min_kwota_zam
+,	   round(max(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as max_kwota_zam
+,	   round(avg(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as sr_kwota_zam
+,	   round(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as sum_kwota_zam
+,	   round(min(o."Freight")::numeric,2) as min_freight
+,	   round(max(o."Freight")::numeric,2) as max_freight
+,	   round(avg(o."Freight")::numeric,2) as sr_freight
+,	   round(sum(o."Freight")::numeric,2) as sum_freight
+,	   case
+	   when date_part('month',o."OrderDate") in (1,2,3) then 1
+	   when date_part('month',o."OrderDate") in (4,5,6) then 2
+	   when date_part('month',o."OrderDate") in (7,8,9) then 3
+	   when date_part('month',o."OrderDate") in (10,11,12) then 4
+	   end as kwartal
+from orders o
+join customers c on o."CustomerID" = c."CustomerID"
+join order_details od on o."OrderID" = od."OrderID" 
+where date_part('year',o."OrderDate") = (select date_part('year',max(o."OrderDate")) from orders o)
+group by kwartal, o."OrderDate", o."OrderID", c."CompanyName";
+--2g
+select c."CompanyName"
+,	   o."OrderDate"
+,	   count(o."OrderID") liczba_zam
+,	   round(min(o."Freight")::numeric,2) min_freight
+,	   round(max(o."Freight")::numeric,2) max_freight
+,	   round(avg(o."Freight")::numeric,2) sr_freight
+,	   round(sum(o."Freight")::numeric,2) sum_freight
+,	   case
+	   when date_part('month',o."OrderDate") in (1,2,3) then 1
+	   when date_part('month',o."OrderDate") in (4,5,6) then 2
+	   when date_part('month',o."OrderDate") in (7,8,9) then 3
+	   when date_part('month',o."OrderDate") in (10,11,12) then 4
+	   end kwartal
+from orders o
+join customers c on o."CustomerID" = c."CustomerID"
+join order_details od on o."OrderID" = od."OrderID" 
+where date_part('year',o."OrderDate") = (select date_part('year',min(o."OrderDate")) from orders o)
+group by kwartal, o."OrderDate", o."OrderID", c."CompanyName";
+--2h
+select c."CompanyName"
+,	   o."OrderDate"
+,	   count(o."OrderID") liczba_zam
+,	   round(min(o."Freight")::numeric,2) min_freight
+,	   round(max(o."Freight")::numeric,2) max_freight
+,	   round(avg(o."Freight")::numeric,2) sr_freight
+,	   round(sum(o."Freight")::numeric,2) sum_freight
+,	   case
+	   when date_part('month',o."OrderDate") in (1,2,3) then 1
+	   when date_part('month',o."OrderDate") in (4,5,6) then 2
+	   when date_part('month',o."OrderDate") in (7,8,9) then 3
+	   when date_part('month',o."OrderDate") in (10,11,12) then 4
+	   end kwartal
+from orders o
+join customers c on o."CustomerID" = c."CustomerID"
+join order_details od on o."OrderID" = od."OrderID" 
+where date_part('year',o."OrderDate") = (select date_part('year',max(o."OrderDate")) from orders o)
+group by kwartal, o."OrderDate", o."OrderID", c."CompanyName"
+union 
+select c."CompanyName"
+,	   o."OrderDate"
+,	   count(o."OrderID") liczba_zam
+,	   round(min(o."Freight")::numeric,2) min_freight
+,	   round(max(o."Freight")::numeric,2) max_freight
+,	   round(avg(o."Freight")::numeric,2) sr_freight
+,	   round(sum(o."Freight")::numeric,2) sum_freight
+,	   case
+	   when date_part('month',o."OrderDate") in (1,2,3) then 1
+	   when date_part('month',o."OrderDate") in (4,5,6) then 2
+	   when date_part('month',o."OrderDate") in (7,8,9) then 3
+	   when date_part('month',o."OrderDate") in (10,11,12) then 4
+	   end kwartal
+from orders o
+join customers c on o."CustomerID" = c."CustomerID"
+join order_details od on o."OrderID" = od."OrderID" 
+where date_part('year',o."OrderDate") = (select date_part('year',min(o."OrderDate")) from orders o)
+group by kwartal, o."OrderDate", o."OrderID", c."CompanyName";
+--2i - a moze distinct?
+select c."CompanyName"
+,	   o."OrderDate"
+,	   count(o."OrderID") liczba_zam
+,	   round(min(o."Freight")::numeric,2) min_freight
+,	   round(max(o."Freight")::numeric,2) max_freight
+,	   round(avg(o."Freight")::numeric,2) sr_freight
+,	   round(sum(o."Freight")::numeric,2) sum_freight
+,	   case
+	   when date_part('month',o."OrderDate") in (1,2,3) then 1
+	   when date_part('month',o."OrderDate") in (4,5,6) then 2
+	   when date_part('month',o."OrderDate") in (7,8,9) then 3
+	   when date_part('month',o."OrderDate") in (10,11,12) then 4
+	   end kwartal
+from orders o
+join customers c on o."CustomerID" = c."CustomerID"
+join order_details od on o."OrderID" = od."OrderID" 
+where date_part('year',o."OrderDate") = (select date_part('year',max(o."OrderDate")) from orders o)
+	or date_part('year',o."OrderDate") = (select date_part('year',min(o."OrderDate")) from orders o)
+group by kwartal, o."OrderDate", o."OrderID", c."CompanyName";
+--2j 
+select count("FirstName") as imie
+,	   count("LastName") as nazwisko
+,	   count(distinct "FirstName") as distint_imie
+,	   count(distinct "LastName") as distinct_nazwisko
+from employees e; 
+--2k
+create view v_pracownicy as
+select *
+from employees e;
+
+select *
+,	   round(('1998-05-01'-"BirthDate")/365,2) wiek_pracownika
+,	   round(('1998-05-01'-"HireDate")/30,2) staz_pracy
+,	   case 
+	   when round(('1998-05-01'-"HireDate")/30,2) < 6 then '2 tygodnie'
+	   when round(('1998-05-01'-"HireDate")/30,2) < 36 then '1 miesiac'
+	   else '3 miesiace'
+	   end okres_wypowiedzenia
+from v_pracownicy; 
+--2l
+select o."OrderID"
+,	   count(od."ProductID") liczba_prod
+,	   sum(od."Quantity") ilosc_prod
+,	   case
+	   when o."Freight" > 20 then 'ok'
+	   else 'nie ok'
+	   end fright_powyzej_20
+,	   round(sum(od."Quantity"*od."UnitPrice"*(1-od."Discount"))::numeric,2) kwota_zamowienia
+,	   round(sum(od."Quantity"*od."UnitPrice"*od."Discount")::numeric,2) kwota_rabatu
+from orders o
+join order_details od on o."OrderID" = od."OrderID"
+group by o."OrderID"
+order by o."OrderID";  
+--zamowienia z rabatem
+select count(o."OrderID") 
+from orders o
+join order_details od on o."OrderID" = od."OrderID"
+where od."Discount" > 0;
+
+
+________________________________________________
+--3a - i
+select * from employees e;
+
+
+insert into employees 
+values (10,'Hewelt', 'Katarzyna', 'CEO', 'Ms.', '1993-05-20', '2010-06-01', 'Jana Pawla II 10', 'Smolno', 'pomorskie', '84100', 'POLAND'); 
+--3a - ii
+update employees 
+set "HireDate" = '2021-03-01'
+where lower("LastName") = 'hewelt';
+--3a - iii
+update employees 
+set "ReportsTo" = 10
+where "ReportsTo" is null; 
+--3a iv
+create view v_tymczas_zamowienia as
+select *
+from orders o; 
+
+update v_tymczas_zamowienia
+set "ShipRegion" = 'Brak danych'
+where "ShipRegion" is null;
+
+delete from v_tymczas_zamowienia
+where lower("ShipCountry") = 'switzerland'; 
+--3a - v
+update v_tymczas_zamowienia
+set "ShipName" = concat(s."CompanyName",' ',"ShipName") 
+from shippers s;
+
+______________________________________
+--4a - i 
+select  *
+,	    e."FirstName"
+from orders o
+join employees e on o."EmployeeID" = e."EmployeeID" 
+where lower(e."FirstName") not in ('janet','margaret');
+--4a - ii
+select e."EmployeeID" 
+,	   count(et."TerritoryID") liczba_terytoriow
+from employees e
+join employeeterritories et on e."EmployeeID" = et."EmployeeID" 
+join territories t on et."TerritoryID" = t."TerritoryID"
+group by e."EmployeeID";
+--4a - iii
+select 
+		distinct	"OrderDate" 
+from orders o
+where "EmployeeID" != 1; 
