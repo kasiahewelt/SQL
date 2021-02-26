@@ -1,0 +1,338 @@
+select kwota_rekompensaty , kwota_rekompensaty_oryginalna from wnioski
+
+select id , kwota_rekompensaty_oryginalna  - kwota_rekompensaty 
+from wnioski 
+where (kwota_rekompensaty_oryginalna  - kwota_rekompensaty ) > 0
+order by (kwota_rekompensaty_oryginalna  - kwota_rekompensaty ) desc 
+
+
+
+select count(*) from wnioski
+where (kwota_rekompensaty / liczba_pasazerow ) not in (250, 400, 600);
+
+--zad3
+--1
+select count(*) from wnioski w 
+
+--2
+select partner, count(1) from wnioski w 
+--where partner is not null
+group by partner
+
+--3
+select liczba_pasazerow, count(1)
+from wnioski w 
+--where liczba_pasazerow is not null
+group by liczba_pasazerow;
+
+--4
+select count(*) from analiza_operatora ao 
+join wnioski w on w.id=ao.id_wniosku 
+
+--5!!!!
+select count(*) from analiza_operatora ao 
+left join wnioski w on w.id = ao.id_wniosku 
+where w.id is null
+
+--6
+select count(*) from analiza_prawna ap 
+left join wnioski w on w.id = ap.id_wniosku 
+
+--7
+select count(*) from analiza_prawna ap 
+left join wnioski w on w.id = ap.id_wniosku 
+join analiza_operatora ao on ap.id_wniosku = ao.id_wniosku
+
+--8 
+select to_char(data_utworzenia, 'yyyy') as rok, count (1) from wnioski w
+group by to_char(data_utworzenia, 'yyyy')
+order by rok
+
+--9
+select jezyk, count(1) from wnioski w 
+group by jezyk 
+order by jezyk 
+
+--10
+select jezyk, to_char(data_utworzenia, 'yyyy') as rok, count(1) 
+from wnioski w 
+group by jezyk, rok
+order by jezyk, rok
+
+
+--zad4
+select id 
+,	data_utworzenia 
+,	avg(kwota_rekompensaty) over (partition by powod_operatora)
+,	row_number() over (order by data_utworzenia)
+from wnioski w 
+where to_char(data_utworzenia, 'yyyy') = '2015' 
+and upper(stan_wniosku) = 'WYPLACONY' 
+order by row_number() over (order by data_utworzenia)
+
+--zad 5
+select id 
+,	data_utworzenia 
+,	partner 
+,	row_number() over (partition by partner) as rn
+from wnioski w
+where to_char(data_utworzenia,'yyyy') = '2018'
+order by data_utworzenia 
+
+select ap.id_wniosku 
+,	w.id 
+,	w.data_utworzenia 
+,	row_number () over (order by data_utworzenia)
+	from wnioski w
+join analiza_prawna ap on ap.id_wniosku = w.id 
+
+
+--zad5 - od trenera
+select *
+,	row_number() over (partition by partner order by data_utworzenia) as rn
+from wnioski 
+where to_char(data_utworzenia,'yyyy') = '2018'
+order by data_utworzenia 
+
+select a.status
+,	a.status_sad
+,	w.kwota_rekompensaty
+,	row_number() over (partition by extract (year from w.data_utworzenia))
+from analiza_prawna a
+join wnioski w on w.id = a.id_wniosku 
+
+
+--lag & lead
+select id, partner, 
+lag (id, 4) over (partition by partner order by kwota_rekompensaty_oryginalna)
+from wnioski w 
+
+select id, partner, 
+lead (id) over (partition by partner order by kwota_rekompensaty_oryginalna)
+from wnioski 
+where to_char(data_utworzenia,'yyyy-mm-dd') = '2017-12-12'
+
+
+--MoM  
+
+
+select date_part('month', data_utworzenia) as miesiac
+,		count(id) as suma_miesiac
+,		lag(count(id)) over ()
+,		abs((count(id) - lag(count(id)) over ()))/lag(count(id)) over ()::numeric * 100 as mom
+from wnioski w 
+where date_part('year', data_utworzenia)=2017
+group by date_part('month', data_utworzenia) 
+
+
+select
+percentile_disc(0.5) within group (order by liczba_pasazerow) as mediana
+from wnioski
+
+select
+percentile_disc(array[0.1, 0.5, 0.9])
+within group (order by liczba_pasazerow) as
+kwantyle from wnioski
+
+
+select mode() within group (order by liczba_pasazerow) from wnioski
+
+select partner, mode() within group (order by liczba_pasazerow) from wnioski
+group by partner
+
+--zad7
+--1
+select 
+	percentile_cont(0.5) within group (order by kwota_rekompensaty) as mediana_rekompensaty
+,	percentile_cont(0.5) within group (order by kwota_rekompensaty_oryginalna) as mediana_reko_oryginalnej
+,	percentile_cont(0.25) within group (order by kwota_rekompensaty) as q1_rekompensaty
+,	percentile_cont(0.25) within group (order by kwota_rekompensaty_oryginalna) as q1_reko_oryginalnej
+,	percentile_cont(0.75) within group (order by kwota_rekompensaty) as q3_rekompensaty
+,	percentile_cont(0.75) within group (order by kwota_rekompensaty_oryginalna) as q3_reko_oryginalnej
+from wnioski 
+
+select 
+	partner 
+,	percentile_cont(0.5) within group (order by kwota_rekompensaty) as mediana_rekompensaty
+,	percentile_cont(0.5) within group (order by kwota_rekompensaty_oryginalna) as mediana_reko_oryginalnej
+,	percentile_cont(0.25) within group (order by kwota_rekompensaty) as q1_rekompensaty
+,	percentile_cont(0.25) within group (order by kwota_rekompensaty_oryginalna) as q1_reko_oryginalnej
+,	percentile_cont(0.75) within group (order by kwota_rekompensaty) as q3_rekompensaty
+,	percentile_cont(0.75) within group (order by kwota_rekompensaty_oryginalna) as q3_reko_oryginalnej
+from wnioski 
+group by partner 
+
+select 
+	percentile_cont (array[0.25, 0.5, 0.75]) within group (order by kwota_rekompensaty) as kwart_rekomp
+,	percentile_cont (array[0.25, 0.5, 0.75]) within group (order by kwota_rekompensaty_oryginalna) as kwart_rekomp_oryg
+from wnioski w 
+
+create view kwartylehehe as
+select 
+	percentile_cont (array[0.25, 0.5, 0.75]) within group (order by kwota_rekompensaty) as kwart_rekomp
+,	percentile_cont (array[0.25, 0.5, 0.75]) within group (order by kwota_rekompensaty_oryginalna) as kwart_rekomp_oryg
+from wnioski w 
+
+
+select unnest(kwart_rekomp) as kwatyle_unnest
+,	unnest(kwart_rekomp_oryg) as kwartle_oryg_unnest
+from kwartylehehe 
+
+
+--wiersz kiedy kwota rekompensaty bedzie max z calego zbioru
+select *
+from wnioski w 
+where kwota_rekompensaty = (select max(kwota_rekompensaty) from wnioski w2);
+
+
+select  * ,kwota_rekompensaty
+from wnioski  
+order by kwota_rekompensaty desc
+limit 1
+
+
+select 
+bool_or( kwota_rekompensaty = kwota_rekompensaty_oryginalna) as jakikolwiek_prawdziwy
+from wnioski w 
+
+select 
+bool_and( kwota_rekompensaty = kwota_rekompensaty_oryginalna) ::int as wszystkie_prawdziwe
+from wnioski w 
+ 
+
+-- odchylenie std i wariancja
+
+select partner
+,	avg(kwota_rekompensaty_oryginalna) as srednia
+,	stddev(kwota_rekompensaty_oryginalna)as odchylenie
+,	variance(kwota_rekompensaty_oryginalna) as wariancja
+, 	count(1) as ilosc wnioskow
+from wnioski w 
+group by partner 
+
+
+ 
+select corr(kwota_rekompensaty_oryginalna, kwota_rekompensaty) from wnioski
+
+select corr(kwota_rekompensaty_oryginalna, liczba_pasazerow) from wnioski
+ 
+--zad8
+select partner, corr(kwota_rekompensaty_oryginalna, liczba_pasazerow) from wnioski
+group by partner 
+
+
+
+select partner , corr((kwota_rekompensaty_oryginalna - kwota_rekompensaty) , liczba_pasazerow) from wnioski
+group by partner 
+
+select id, kwota_rekompensaty_oryginalna, liczba_pasazerow, opoznienie, data_utworzenia
+from wnioski
+where
+extract(year from data_utworzenia) in
+(select distinct extract(year from data_rozpoczecia) from analiza_prawna)
+order by data_utworzenia desc
+
+select
+w.id, w.kwota_rekompensaty, w.liczba_pasazerow, w.kod_kraju,
+w.powod_operatora, w.data_utworzenia from wnioski w
+where kod_kraju = 'PL'
+and (select count(1) from dokumenty where id_wniosku = w.id) > 10
+
+select w.* from wnioski w where exists( select 1 from analiza_prawna a where a.id_wniosku = w.id)
+ 
+
+select id, kwota_rekompensaty, podzapytanie.status from wnioski
+join
+(select id_wniosku, status from analiza_prawna) as podzapytanie on podzapytanie.id_wniosku = wnioski.id
+ 
+
+WITH wnioski_2017 AS (
+select id, kwota_rekompensaty, liczba_pasazerow from wnioski
+where extract(year from data_utworzenia) = 2017
+)
+select * from wnioski_2017
+
+--zad 9
+with info_miesiac_rok as (
+select count(id)
+,	to_char(data_utworzenia, 'yyyy-mm') 
+from wnioski w 
+group by to_char(data_utworzenia, 'yyyy-mm')
+ )
+ select * from info_miesiac_rok union 
+select count(id), 'suma'
+from wnioski w 
+
+
+select  jezyk
+,		avg(kwota_rekompensaty) as srednia
+,		min(kwota_rekompensaty) as minimalna
+,		max(kwota_rekompensaty) as maksymalna
+,		percentile_cont(0.5) within group (order by kwota_rekompensaty) as mediana_rekompensaty	
+,		percentile_cont(0.25) within group (order by kwota_rekompensaty) as q1_reko
+,		percentile_cont(0.75) within group (order by kwota_rekompensaty) as q3_reko
+from wnioski w 
+group by jezyk 
+
+
+select  jezyk
+,		avg(kwota_rekompensaty) as srednia
+,		min(kwota_rekompensaty) as minimalna
+,		max(kwota_rekompensaty) as maksymalna
+,		percentile_cont(0.5) within group (order by kwota_rekompensaty) as mediana_rekompensaty	
+,		percentile_cont(0.25) within group (order by kwota_rekompensaty) as q1_reko
+,		percentile_cont(0.75) within group (order by kwota_rekompensaty) as q3_reko
+from wnioski w 
+group by jezyk 
+
+with zmiana_yoy as (
+select   
+		avg(kwota_rekompensaty) as srednia
+,		to_char(data_utworzenia, 'yyyy') as jezudata	
+from wnioski w
+where jezyk = 'en'
+group by to_char(data_utworzenia, 'yyyy')
+)
+select lag(srednia) over ()
+,		srednia 
+,		jezudata 
+,		(srednia - lag(srednia) over() ) / lag(srednia) over () *100 as zmiana
+from zmiana_yoy 
+
+--pivot table
+create extension tablefunc;
+
+select 
+distinct(stan_wniosku)
+from wnioski
+
+SELECT jezyk, stan_wniosku, count(*) FROM public.wnioski GROUP BY 1, 2
+
+SELECT *
+FROM crosstab('select jezyk::text, stan_wniosku::text, count(*)::numeric FROM wnioski group by 1, 2')
+AS final_result(“jezyk” text, "odrzucony prawnie" numeric, "odrzucony po analizie" numeric, "zaakceptowany przez operatora" numeric, "wyplacony" numeric, "zamkniety" numeric, "akcja sadowa" numeric, "nowy" numeric, "analiza zaakceptowana" numeric, "przegrany w sadzie" numeric, "wyslany do operatora" numeric, "odrzucony przez operatora" numeric, "wygrany w sadzie" numeric);
+ 
+
+create index wnioski_jezyk
+on wnioski (jezyk);
+ 
+
+with odpowiedz as
+(
+select  ao.status_odp 
+,		w.opoznienie 
+,		sp.czy_zaklocony 
+,		case 
+		when status_odp like 'zaakceptowany%' then 'GOOD'
+		when status_odp like 'odrzucony%' then 'BAD'
+		end as odp
+from analiza_operatora ao 
+join wnioski w on w.id=ao.id
+join podroze p on p.id_wniosku =w.id
+join szczegoly_podrozy sp on sp.id_podrozy = p.id 
+)
+select opoznienie 
+,	((select count(odp) from odpowiedz where odp = 'GOOD')::numeric/count(odp))::numeric DG
+,	((select count(odp) from odpowiedz where odp = 'GOOD')::numeric/count(odp))::numeric DB
+from odpowiedz 
+group by opoznienie 
