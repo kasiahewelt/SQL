@@ -1,0 +1,264 @@
+/*Stwórzmy zestawienie za ostatni miesiąc sprzedaży.
+▪ Dla każdego zamówienia wyznaczmy liczbę zakupionych produktów, liczbę
+produktów ze zniżką, kwotę zniżki oraz całkowitą wartość zamówienia.
+▪ Sprawdźmy działanie rollup oraz cube.
+*/
+
+select o."OrderDate" 
+, 	   o."OrderID"  
+,	   count(*) as liczba_produktow
+,	   sum(case when od."Discount">0 then 1 else 0 end) as liczba_produktow_ze_znizka
+,	   count(case when od."Discount">0 then o."OrderID" end) as liczba_produktow_ze_znizka_v2
+,	   sum(od."UnitPrice"*od."Quantity"*od."Discount") as kwota_znizki
+,	   sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as cena_calkowita
+from orders o 
+join order_details od  on o."OrderID" = od."OrderID" 
+group by o."OrderDate" , o."OrderID" ;
+
+--walidacja
+
+select o."OrderDate" 
+, 	   o."OrderID"  
+,	   count(*) as liczba_produktow
+,	   sum(case when od."Discount">0 then 1 else 0 end) as liczba_produktow_ze_znizka
+,	   count(case when od."Discount">0 then o."OrderID" end) as liczba_produktow_ze_znizka_v2
+,	   sum(od."UnitPrice"*od."Quantity"*od."Discount") as kwota_znizki
+,	   sum(od."UnitPrice"*od."Quantity"*(1-od."Discount")) as cena_calkowita
+from orders o 
+join order_details od  on o."OrderID" = od."OrderID" 
+group by o."OrderDate" , o."OrderID" 
+having sum(case when od."Discount">0 then 1 else 0 end) = count(case when od."Discount">0 then o."OrderID" end);
+
+
+
+select o."OrderDate" 
+, 	   o."OrderID"  
+,	   count(*) as liczba_produktow
+,	   sum(case when od."Discount">0 then 1 else 0 end) as liczba_produktow_ze_znizka
+,	   count(case when od."Discount">0 then o."OrderID" end) as liczba_produktow_ze_znizka_v2
+,	   round(sum(od."UnitPrice"*od."Quantity"*od."Discount")::numeric,2) as kwota_znizki
+,	   round(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as cena_calkowita
+from orders o 
+join order_details od  on o."OrderID" = od."OrderID" 
+group by o."OrderDate" , o."OrderID" ;
+
+
+select max(o."OrderDate")
+from orders o 
+
+--funkcja to_char
+
+select o."OrderDate" 
+, 	   o."OrderID"  
+,	   count(*) as liczba_produktow
+,	   sum(case when od."Discount">0 then 1 else 0 end) as liczba_produktow_ze_znizka
+,	   count(case when od."Discount">0 then o."OrderID" end) as liczba_produktow_ze_znizka_v2
+,	   round(sum(od."UnitPrice"*od."Quantity"*od."Discount")::numeric,2) as kwota_znizki
+,	   round(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as cena_calkowita
+from orders o 
+join order_details od  on o."OrderID" = od."OrderID" 
+where to_char(o."OrderDate", 'YYYY-MM')='1998-04'
+group by o."OrderDate" , o."OrderID" ;
+
+
+
+
+--stworzenie widoku
+create view v_sprzedaz_041998 as select
+select o."OrderDate" 
+, 	   o."OrderID"  
+,	   count(*) as liczba_produktow
+,	   sum(case when od."Discount">0 then 1 else 0 end) as liczba_produktow_ze_znizka
+--,	   count(case when od."Discount">0 then o."OrderID" end) as liczba_produktow_ze_znizka_v2
+,	   round(sum(od."UnitPrice"*od."Quantity"*od."Discount")::numeric,2) as kwota_znizki
+,	   round(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric,2) as cena_calkowita
+from orders o 
+join order_details od  on o."OrderID" = od."OrderID" 
+where to_char(o."OrderDate", 'YYYY-MM')='1998-04'
+group by o."OrderID" 
+
+select * from v_sprzedaz_041998
+
+
+select *
+from v_sprzedaz_041998 v
+join orders o on v."OrderID" = o."OrderID" ;
+
+
+--zad 13
+
+select 
+	e."LastName"
+,	e."FirstName"
+,	count(distinct(o."OrderID")) as liczba_zamowien
+,	round(sum(od."UnitPrice"*od."Quantity"*(1-od."Discount"))::numeric, 2) as wartosc_zamowien
+,	date_part('month', o."OrderDate")
+,	e."EmployeeID" 
+from orders o 
+join order_details od on o."OrderID" = od."OrderID" 
+join employees e on e."EmployeeID" = o."EmployeeID" 
+group by date_part('month', o."OrderDate"), e."LastName", e."FirstName", e."EmployeeID"
+order by date_part('month', o."OrderDate")
+
+
+select * from orders o
+where "EmployeeID" =1 and date_part('month', o."OrderDate") =1
+
+--zadanie na szostke
+
+select * from products p 
+select * from categories c 
+
+select 
+	c."CategoryName"
+,	p."UnitsInStock"
+from categories c
+join products p on c."CategoryID" = p."CategoryID" 
+group by  c."CategoryName" , p."UnitsInStock"
+
+
+create view v_okno as
+select 	c."CustomerID" 
+,		c."Address" 
+,		c."City" 
+,		c."CompanyName" 
+,		c."Country" 
+,		min(o."OrderDate") 	as data_pierwszego_zamowienia
+, 		max("OrderDate")	as data_ostatniego_zamowienia
+from customers c
+join orders o on c."CustomerID" =o."CustomerID" 
+group by c."CustomerID" 
+,		c."Address" 
+,		c."City" 
+,		c."CompanyName" 
+,		c."Country" 
+;
+
+select * from v_okno
+
+select *
+,	row_number() 	 over (order by data_pierwszego_zamowienia)  as rn
+,	rank()			 over (order by data_pierwszego_zamowienia)  as rk
+,	dense_rank()	 over (order by data_pierwszego_zamowienia)  as rk2
+,	ntile(10)		 over (order by data_pierwszego_zamowienia)  as ntile_10
+from v_okno ;
+
+
+--patrycjonowanie numeru po latach 
+select *
+,	date_part('year', data_pierwszego_zamowienia)
+,	row_number() 	 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia) as rn
+,	rank()			 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia)  as rk
+,	dense_rank()	 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia)  as rk2
+,	ntile(10)		 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia)  as ntile_10
+from v_okno ;
+
+--a nasteonie w miesiacach
+select *
+,	date_part('year', data_pierwszego_zamowienia)
+,	row_number() 	 over (partition by to_char(data_pierwszego_zamowienia, 'YYYY-MM') order by data_pierwszego_zamowienia) as rn
+,	rank()			 over (partition by to_char(data_pierwszego_zamowienia, 'YYYY-MM') order by data_pierwszego_zamowienia)  as rk
+,	dense_rank()	 over (partition by to_char(data_pierwszego_zamowienia, 'YYYY-MM') order by data_pierwszego_zamowienia)  as rk2
+,	ntile(10)		 over (partition by to_char(data_pierwszego_zamowienia, 'YYYY-MM') order by data_pierwszego_zamowienia)  as ntile_10
+from v_okno ;
+
+
+select *
+,	date_part('year', "OrderDate")
+,	avg("Freight") over (partition by date_part('year', "OrderDate"))
+from orders
+
+select *
+,	date_part('year', "OrderDate")
+,	avg("Freight") over (partition by date_part('year', "OrderDate"))
+,	"Freight" / avg("Freight") over (partition by date_part('year', "OrderDate")) procent_sredniej_rocznej
+from orders
+
+
+-- wszyscy klienci, ktorzy zlozyli pierwsze zamowienie w poszczegolnych latach
+
+create view v_okno2 as
+select *
+,	date_part('year', data_pierwszego_zamowienia)
+,	row_number() 	 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia) as rn
+,	rank()			 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia)  as rk
+,	dense_rank()	 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia)  as rk2
+,	ntile(10)		 over (partition by date_part('year',data_pierwszego_zamowienia) order by data_pierwszego_zamowienia)  as ntile_10
+from v_okno ;
+
+select * from v_okno2
+where rn = 1
+;
+
+--zad 15
+
+/*Do wyników tabeli orders dodaj numer zamówienia w miesiącu (partycjonowanie po miesiącach) kolejność według daty.
+ ▪ Dodaj analogiczne pole, ale w kolejności malejącej.*/
+ 
+ select * 
+,	row_number()	over(partition by to_char(o."OrderDate", 'yyyy-mm') order by o."OrderDate") as rn
+,	row_number()	over(partition by to_char(o."OrderDate", 'yyyy-mm') order by o."OrderDate" desc) as rn_malejaco
+from orders o 
+
+/*▪ Wypisz datę pierwszego i ostatniego zamówienia.
+▪ Dodaj do wyników kwotę zamówienia.
+▪ Podziel zbiór za pomocą funkcji ntile na 5 podzbiorów według kwoty zamówienia.
+▪ Wyznacz minimalną i maksymalną wartość z wyników poprzedniego punktu dla każdego klienta.
+▪ Sprawdź, czy istnieją klienci premium (którzy zawsze występują w kwnatylu 4 lub 5).*/
+
+create view v_orders2 as
+select * 
+,	row_number()	over(partition by to_char(o."OrderDate", 'yyyy-mm') order by o."OrderDate") as rn
+,	row_number()	over(partition by to_char(o."OrderDate", 'yyyy-mm') order by o."OrderDate" desc) as rn_malejaco
+from orders o 
+
+
+select *
+from v_orders2
+where rn = 1 or rn_malejaco = 1;
+
+select *
+,	round(sum(od."Quantity" * od."UnitPrice" * (1-od."Discount"))::numeric, 2) as wartosc_zamowienia
+from v_orders2 v2
+join order_details od on v2."OrderID" = od."OrderID" 
+where rn= 1
+group by 
+
+
+
+create view v_zamowienia as
+select 	o."OrderDate"
+,		row_number() over (partition by to_char(o."OrderDate",'YYYY_MM') order by o."OrderDate" desc) as nr_zamowienia
+from orders o
+group by o."OrderDate"
+;
+select 	o."OrderDate"
+,		to_char(o."OrderDate",'YYYY_MM')
+,		min(o."OrderDate") over (partition by to_char(o."OrderDate",'YYYY_MM')) as pierwsza_data
+,		max(o."OrderDate") over (partition by to_char(o."OrderDate",'YYYY_MM')) as ostatnia_data
+from orders o
+group by o."OrderDate"
+;
+
+
+
+
+
+
+--dziadowo
+create view v_order as
+select o."OrderID"
+,	min(o."OrderDate") as data_pierw_zam
+,	max(o."OrderDate") as data_ostat_zam
+from orders o
+group by o."OrderID" 
+
+select * 
+,	date_part('year', data_pierwszego_zamowienia)
+,	row_number() 	 over (partition by date_part('year',data_pierw_zam) order by data_pierwszego_zamowienia) as rn
+from v_order
+
+--zadanie dodatkowe
+
+
+
